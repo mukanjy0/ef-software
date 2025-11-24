@@ -78,11 +78,18 @@ class GradeCalculator:
         extra_points_enabled: bool,
     ) -> float:
         base_grade = self._calculate_weighted_average()
+
         after_attendance = handle_minimum_attendance(
             base_grade,
             attendance_ratio,
             ATTENDANCE_THRESHOLD,
         )
+
+        # If the student did not reach the minimum attendance,
+        # the grade is 0 and extra points are not applied.
+        if after_attendance == 0.0 and attendance_ratio < ATTENDANCE_THRESHOLD:
+            return 0.0
+
         after_extra = handle_extra_points(
             after_attendance,
             extra_points_enabled,
@@ -125,39 +132,79 @@ def _read_yes_no(prompt: str) -> bool:
         print("Please answer with 'y' or 'n'.")
 
 
+def _read_non_empty_string(prompt: str) -> str:
+    while True:
+        value = input(prompt).strip()
+        if value:
+            return value
+        print("Please enter a non-empty value.")
+
+
+def _read_evaluation_count() -> int:
+    while True:
+        count = _read_int("How many evaluations does the student have? ")
+        if count <= 0:
+            print("There must be at least one evaluation.")
+            continue
+        if count > MAX_EVALUATIONS:
+            print(
+                f"Maximum number of evaluations is {MAX_EVALUATIONS}. "
+                f"Please enter a valid number."
+            )
+            continue
+        return count
+
+
+def _read_evaluations() -> List[Evaluation]:
+    while True:
+        count = _read_evaluation_count()
+        evaluations: List[Evaluation] = []
+
+        for index in range(1, count + 1):
+            while True:
+                print(f"\nEvaluation {index}")
+                mark = _read_float("  Mark (0–20): ")
+                weight_percentage = _read_int(
+                    "  Weight percentage (1–100, e.g. 30 for 30%): "
+                )
+                try:
+                    evaluation = Evaluation(
+                        mark=mark,
+                        weight_percentage=weight_percentage,
+                    )
+                except ValueError as error:
+                    print(f"Invalid evaluation: {error}")
+                    continue
+                evaluations.append(evaluation)
+                break
+
+        total_weight = sum(e.weight_percentage for e in evaluations)
+        if total_weight != TOTAL_WEIGHT_PERCENTAGE:
+            print(
+                f"\nThe sum of weight percentages must be "
+                f"{TOTAL_WEIGHT_PERCENTAGE}, but is {total_weight}."
+            )
+            print("Please re-enter all evaluations.\n")
+            continue
+
+        return evaluations
+
+
 def main() -> None:
     print("=== CS-GradeCalculator ===")
 
-    count = _read_int("How many evaluations does the student have? ")
-    if count <= 0:
-        print("There must be at least one evaluation.")
-        return
-    if count > MAX_EVALUATIONS:
-        print(f"Maximum number of evaluations is {MAX_EVALUATIONS}.")
-        return
+    student_code = _read_non_empty_string("Student code: ")
+    student_identifier = _read_non_empty_string("Student identifier: ")
 
-    evaluations: List[Evaluation] = []
-    for index in range(1, count + 1):
-        print(f"\nEvaluation {index}")
-        mark = _read_float("  Mark (0–20): ")
-        weight_percentage = _read_int(
-            "  Weight percentage (1–100, e.g. 30 for 30%): "
-        )
-        try:
-            evaluations.append(
-                Evaluation(mark=mark, weight_percentage=weight_percentage)
-            )
-        except ValueError as error:
-            print(f"Invalid evaluation: {error}")
-            return
+    evaluations = _read_evaluations()
 
     attendance_percentage = _read_float(
-        "\nStudent attendance percentage (0–100): "
+        "\nStudent attendance percentage (0–100 with threshold being 70): "
     )
     attendance_ratio = attendance_percentage / 100.0
 
     extra_points_enabled = _read_yes_no(
-        "Are extra points enabled for this year? (yes | no)"
+        "Are extra points enabled for this year?"
     )
 
     try:
@@ -171,6 +218,8 @@ def main() -> None:
         return
 
     print("\n=== Result ===")
+    print(f"Student code: {student_code}")
+    print(f"Student identifier: {student_identifier}")
     print(f"Final grade: {final_grade:.2f}")
 
 
