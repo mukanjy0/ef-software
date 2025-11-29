@@ -10,6 +10,16 @@ python -m unittest test_grade_calculator.py
 python -m unittest discover
 ```
 
+
+
+## Resultados de calidad y análisis SonarQube
+
+### Calidad requerida
+![Calidad requerida](quality.png)
+
+### Resultado del alumno en SonarQube
+![Resultado SonarQube](sonnar.png)
+
 # Enunciado - CS3081 — Examen Parcial (2025-2)
 
 ## 2. Desarrollo e Implementación (11 pts)
